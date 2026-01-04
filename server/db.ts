@@ -1,14 +1,16 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, userDailyQuests, userProgress, titles, userTitles, notifications, weeklyRewards, dailyQuestTemplates } from "../drizzle/schema";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
+import { InsertUser, users, userDailyQuests, userProgress, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: any = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const sql = neon(process.env.DATABASE_URL);
+      _db = drizzle(sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -29,47 +31,31 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
+    const existingUser = await db.select().from(users).where(eq(users.openId, user.openId)).limit(1);
+    
+    const updateSet: any = {
+      name: user.name ?? (existingUser.length > 0 ? existingUser[0].name : null),
+      email: user.email ?? (existingUser.length > 0 ? existingUser[0].email : null),
+      loginMethod: user.loginMethod ?? (existingUser.length > 0 ? existingUser[0].loginMethod : null),
+      lastSignedIn: new Date(),
     };
 
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
     if (user.role !== undefined) {
-      values.role = user.role;
       updateSet.role = user.role;
     } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
       updateSet.role = 'admin';
     }
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
+    if (existingUser.length > 0) {
+      await db.update(users)
+        .set(updateSet)
+        .where(eq(users.openId, user.openId));
+    } else {
+      await db.insert(users).values({
+        ...user,
+        ...updateSet,
+      });
     }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -95,8 +81,6 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// Gamification helpers
-
 export async function getTodayQuests(userId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -121,33 +105,27 @@ export async function updateQuestProgress(questId: number, progress: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.update(userDailyQuests)
+  return db.update(userDailyQuests)
     .set({ currentProgress: progress })
     .where(eq(userDailyQuests.id, questId));
-  
-  return result;
 }
 
 export async function completeQuest(questId: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.update(userDailyQuests)
+  return db.update(userDailyQuests)
     .set({ completed: true, completedAt: new Date() })
     .where(eq(userDailyQuests.id, questId));
-  
-  return result;
 }
 
 export async function failQuest(questId: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const result = await db.update(userDailyQuests)
+  return db.update(userDailyQuests)
     .set({ failed: true, failedAt: new Date() })
     .where(eq(userDailyQuests.id, questId));
-  
-  return result;
 }
 
 export async function addUserXp(userId: number, xpAmount: number) {
@@ -162,10 +140,9 @@ export async function addUserXp(userId: number, xpAmount: number) {
   let xpForNextLevel = user.xpToNextLevel;
   let leveledUp = false;
   
-  // Check for level up
   if (newXp >= user.xpToNextLevel) {
     newLevel = user.level + 1;
-    xpForNextLevel = Math.floor(user.xpToNextLevel * 1.2); // 20% more XP for next level
+    xpForNextLevel = Math.floor(user.xpToNextLevel * 1.2);
     leveledUp = true;
   }
   
@@ -174,8 +151,8 @@ export async function addUserXp(userId: number, xpAmount: number) {
       xp: newXp,
       level: newLevel,
       xpToNextLevel: xpForNextLevel,
-      hp: Math.min(user.maxHp, user.hp + 10), // Restore some HP on quest completion
-      mp: Math.min(user.maxMp, user.mp + 5)   // Restore some MP
+      hp: Math.min(user.maxHp, user.hp + 10),
+      mp: Math.min(user.maxMp, user.mp + 5)
     })
     .where(eq(users.id, userId));
   
@@ -216,12 +193,6 @@ export async function getLeaderboard(limit: number = 10) {
     name: users.name,
     level: users.level,
     xp: users.xp,
-    strength: users.strength,
-    vitality: users.vitality,
-    agility: users.agility,
-    intelligence: users.intelligence,
-    wisdom: users.wisdom,
-    luck: users.luck,
     currentStreak: users.currentStreak,
   })
     .from(users)

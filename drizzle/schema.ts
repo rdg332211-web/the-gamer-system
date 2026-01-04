@@ -1,41 +1,41 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
+import { int, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean } from "drizzle-orm/pg-core";
 
 /**
  * Core user table backing auth flow.
  * Extended with gamification fields.
  */
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: pgEnum("role", ["user", "admin"]).default("user").notNull(),
   
   // Gamification fields
-  level: int("level").default(1).notNull(),
-  xp: int("xp").default(0).notNull(),
-  xpToNextLevel: int("xpToNextLevel").default(100).notNull(),
-  hp: int("hp").default(100).notNull(),
-  maxHp: int("maxHp").default(100).notNull(),
-  mp: int("mp").default(50).notNull(),
-  maxMp: int("maxMp").default(50).notNull(),
+  level: integer("level").default(1).notNull(),
+  xp: integer("xp").default(0).notNull(),
+  xpToNextLevel: integer("xpToNextLevel").default(100).notNull(),
+  hp: integer("hp").default(100).notNull(),
+  maxHp: integer("maxHp").default(100).notNull(),
+  mp: integer("mp").default(50).notNull(),
+  maxMp: integer("maxMp").default(50).notNull(),
   
   // Attributes (RPG Stats)
-  strength: int("strength").default(10).notNull(),
-  vitality: int("vitality").default(10).notNull(),
-  agility: int("agility").default(10).notNull(),
-  intelligence: int("intelligence").default(10).notNull(),
-  wisdom: int("wisdom").default(10).notNull(),
-  luck: int("luck").default(5).notNull(),
+  strength: integer("strength").default(10).notNull(),
+  vitality: integer("vitality").default(10).notNull(),
+  agility: integer("agility").default(10).notNull(),
+  intelligence: integer("intelligence").default(10).notNull(),
+  wisdom: integer("wisdom").default(10).notNull(),
+  luck: integer("luck").default(5).notNull(),
   
   // Streak tracking
-  currentStreak: int("currentStreak").default(0).notNull(),
-  longestStreak: int("longestStreak").default(0).notNull(),
+  currentStreak: integer("currentStreak").default(0).notNull(),
+  longestStreak: integer("longestStreak").default(0).notNull(),
   lastQuestCompletedAt: timestamp("lastQuestCompletedAt"),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -45,14 +45,14 @@ export type InsertUser = typeof users.$inferInsert;
 /**
  * Push notification subscriptions
  */
-export const pushSubscriptions = mysqlTable("pushSubscriptions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id),
+export const pushSubscriptions = pgTable("pushSubscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id),
   endpoint: varchar("endpoint", { length: 500 }).notNull().unique(),
   p256dh: text("p256dh").notNull(),
   auth: text("auth").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
@@ -61,21 +61,21 @@ export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
 /**
  * Daily quests template - defines available quests
  */
-export const dailyQuestTemplates = mysqlTable("dailyQuestTemplates", {
-  id: int("id").autoincrement().primaryKey(),
+export const dailyQuestTemplates = pgTable("dailyQuestTemplates", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  category: mysqlEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).notNull(),
-  baseXp: int("baseXp").default(50).notNull(),
-  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard", "extreme"]).default("medium").notNull(),
+  category: pgEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).notNull(),
+  baseXp: integer("baseXp").default(50).notNull(),
+  difficulty: pgEnum("difficulty", ["easy", "medium", "hard", "extreme"]).default("medium").notNull(),
   
   // Attribute bonuses
-  strengthBonus: int("strengthBonus").default(0).notNull(),
-  vitalityBonus: int("vitalityBonus").default(0).notNull(),
-  agilityBonus: int("agilityBonus").default(0).notNull(),
-  intelligenceBonus: int("intelligenceBonus").default(0).notNull(),
-  wisdomBonus: int("wisdomBonus").default(0).notNull(),
-  luckBonus: int("luckBonus").default(0).notNull(),
+  strengthBonus: integer("strengthBonus").default(0).notNull(),
+  vitalityBonus: integer("vitalityBonus").default(0).notNull(),
+  agilityBonus: integer("agilityBonus").default(0).notNull(),
+  intelligenceBonus: integer("intelligenceBonus").default(0).notNull(),
+  wisdomBonus: integer("wisdomBonus").default(0).notNull(),
+  luckBonus: integer("luckBonus").default(0).notNull(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -86,23 +86,23 @@ export type InsertDailyQuestTemplate = typeof dailyQuestTemplates.$inferInsert;
 /**
  * User's daily quests - tracks active quests for each user
  */
-export const userDailyQuests = mysqlTable("userDailyQuests", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  templateId: int("templateId").notNull(),
+export const userDailyQuests = pgTable("userDailyQuests", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  templateId: integer("templateId").notNull(),
   
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  category: mysqlEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).notNull(),
-  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard", "extreme"]).notNull(),
+  category: pgEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).notNull(),
+  difficulty: pgEnum("difficulty", ["easy", "medium", "hard", "extreme"]).notNull(),
   
   // Progress tracking
-  currentProgress: int("currentProgress").default(0).notNull(),
-  targetProgress: int("targetProgress").notNull(),
+  currentProgress: integer("currentProgress").default(0).notNull(),
+  targetProgress: integer("targetProgress").notNull(),
   unit: varchar("unit", { length: 50 }).default("").notNull(), // e.g., "reps", "pages", "hours", "km"
   
   // Rewards
-  xpReward: int("xpReward").notNull(),
+  xpReward: integer("xpReward").notNull(),
   
   // Status
   completed: boolean("completed").default(false).notNull(),
@@ -121,21 +121,21 @@ export type InsertUserDailyQuest = typeof userDailyQuests.$inferInsert;
 /**
  * User progress history - tracks all completed quests
  */
-export const userProgress = mysqlTable("userProgress", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  questId: int("questId").notNull(),
+export const userProgress = pgTable("userProgress", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  questId: integer("questId").notNull(),
   
-  xpGained: int("xpGained").notNull(),
+  xpGained: integer("xpGained").notNull(),
   levelUp: boolean("levelUp").default(false).notNull(),
   
   // Attribute gains
-  strengthGain: int("strengthGain").default(0).notNull(),
-  vitalityGain: int("vitalityGain").default(0).notNull(),
-  agilityGain: int("agilityGain").default(0).notNull(),
-  intelligenceGain: int("intelligenceGain").default(0).notNull(),
-  wisdomGain: int("wisdomGain").default(0).notNull(),
-  luckGain: int("luckGain").default(0).notNull(),
+  strengthGain: integer("strengthGain").default(0).notNull(),
+  vitalityGain: integer("vitalityGain").default(0).notNull(),
+  agilityGain: integer("agilityGain").default(0).notNull(),
+  intelligenceGain: integer("intelligenceGain").default(0).notNull(),
+  wisdomGain: integer("wisdomGain").default(0).notNull(),
+  luckGain: integer("luckGain").default(0).notNull(),
   
   completedAt: timestamp("completedAt").defaultNow().notNull(),
 });
@@ -146,15 +146,15 @@ export type InsertUserProgress = typeof userProgress.$inferInsert;
 /**
  * Titles/Achievements - unlockable titles based on progress
  */
-export const titles = mysqlTable("titles", {
-  id: int("id").autoincrement().primaryKey(),
+export const titles = pgTable("titles", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
   
   // Unlock conditions
-  requiredLevel: int("requiredLevel").default(1).notNull(),
-  requiredXp: int("requiredXp").default(0).notNull(),
-  requiredStreak: int("requiredStreak").default(0).notNull(),
+  requiredLevel: integer("requiredLevel").default(1).notNull(),
+  requiredXp: integer("requiredXp").default(0).notNull(),
+  requiredStreak: integer("requiredStreak").default(0).notNull(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -165,10 +165,10 @@ export type InsertTitle = typeof titles.$inferInsert;
 /**
  * User titles - tracks which titles the user has unlocked
  */
-export const userTitles = mysqlTable("userTitles", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  titleId: int("titleId").notNull(),
+export const userTitles = pgTable("userTitles", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  titleId: integer("titleId").notNull(),
   
   unlockedAt: timestamp("unlockedAt").defaultNow().notNull(),
 });
@@ -179,11 +179,11 @@ export type InsertUserTitle = typeof userTitles.$inferInsert;
 /**
  * Notifications - tracks alerts sent to users
  */
-export const notifications = mysqlTable("notifications", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   
-  type: mysqlEnum("type", ["quest_available", "quest_deadline", "level_up", "achievement_unlocked", "motivational", "penalty"]).notNull(),
+  type: pgEnum("type", ["quest_available", "quest_deadline", "level_up", "achievement_unlocked", "motivational", "penalty"]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
   
@@ -199,16 +199,16 @@ export type InsertNotification = typeof notifications.$inferInsert;
 /**
  * Weekly rewards - tracks rewards given at end of week
  */
-export const weeklyRewards = mysqlTable("weeklyRewards", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const weeklyRewards = pgTable("weeklyRewards", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   
-  week: int("week").notNull(), // Week number of the year
-  year: int("year").notNull(),
+  week: integer("week").notNull(), // Week number of the year
+  year: integer("year").notNull(),
   
-  questsCompleted: int("questsCompleted").default(0).notNull(),
-  totalXpEarned: int("totalXpEarned").default(0).notNull(),
-  bonusXp: int("bonusXp").default(0).notNull(),
+  questsCompleted: integer("questsCompleted").default(0).notNull(),
+  totalXpEarned: integer("totalXpEarned").default(0).notNull(),
+  bonusXp: integer("bonusXp").default(0).notNull(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -219,19 +219,19 @@ export type InsertWeeklyReward = typeof weeklyRewards.$inferInsert;
 /**
  * Custom quests created by users
  */
-export const customQuests = mysqlTable("customQuests", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const customQuests = pgTable("customQuests", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  category: mysqlEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).default("custom").notNull(),
-  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard", "extreme"]).default("medium").notNull(),
-  baseXp: int("baseXp").default(50).notNull(),
-  targetProgress: int("targetProgress").default(1).notNull(),
+  category: pgEnum("category", ["exercise", "learning", "health", "productivity", "custom"]).default("custom").notNull(),
+  difficulty: pgEnum("difficulty", ["easy", "medium", "hard", "extreme"]).default("medium").notNull(),
+  baseXp: integer("baseXp").default(50).notNull(),
+  targetProgress: integer("targetProgress").default(1).notNull(),
   unit: varchar("unit", { length: 50 }).default("").notNull(),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type CustomQuest = typeof customQuests.$inferSelect;
@@ -240,9 +240,9 @@ export type InsertCustomQuest = typeof customQuests.$inferInsert;
 /**
  * Chat messages history
  */
-export const chatMessages = mysqlTable("chatMessages", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const chatMessages = pgTable("chatMessages", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   role: varchar("role", { length: 20 }).notNull(),
   content: text("content").notNull(),
   audioUrl: varchar("audioUrl", { length: 512 }),
@@ -256,17 +256,17 @@ export type InsertChatMessage = typeof chatMessages.$inferInsert;
 /**
  * XP Distribution tracking
  */
-export const xpDistribution = mysqlTable("xpDistribution", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  questId: int("questId").notNull(),
-  totalXp: int("totalXp").notNull(),
-  strengthXp: int("strengthXp").default(0).notNull(),
-  vitalityXp: int("vitalityXp").default(0).notNull(),
-  agilityXp: int("agilityXp").default(0).notNull(),
-  intelligenceXp: int("intelligenceXp").default(0).notNull(),
-  wisdomXp: int("wisdomXp").default(0).notNull(),
-  luckXp: int("luckXp").default(0).notNull(),
+export const xpDistribution = pgTable("xpDistribution", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  questId: integer("questId").notNull(),
+  totalXp: integer("totalXp").notNull(),
+  strengthXp: integer("strengthXp").default(0).notNull(),
+  vitalityXp: integer("vitalityXp").default(0).notNull(),
+  agilityXp: integer("agilityXp").default(0).notNull(),
+  intelligenceXp: integer("intelligenceXp").default(0).notNull(),
+  wisdomXp: integer("wisdomXp").default(0).notNull(),
+  luckXp: integer("luckXp").default(0).notNull(),
   questType: varchar("questType", { length: 50 }).notNull(),
   distributedAt: timestamp("distributedAt").defaultNow().notNull(),
 });
@@ -277,13 +277,13 @@ export type InsertXpDistribution = typeof xpDistribution.$inferInsert;
 /**
  * Extra missions suggested by AI
  */
-export const extraMissions = mysqlTable("extraMissions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const extraMissions = pgTable("extraMissions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   trigger: varchar("trigger", { length: 100 }).notNull(),
-  xpReward: int("xpReward").notNull(),
+  xpReward: integer("xpReward").notNull(),
   completed: boolean("completed").default(false).notNull(),
   suggestedAt: timestamp("suggestedAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
@@ -295,14 +295,14 @@ export type InsertExtraMission = typeof extraMissions.$inferInsert;
 /**
  * Penalties applied to users
  */
-export const penalties = mysqlTable("penalties", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const penalties = pgTable("penalties", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   type: varchar("type", { length: 50 }).notNull(),
   reason: varchar("reason", { length: 255 }).notNull(),
-  xpLost: int("xpLost").default(0).notNull(),
+  xpLost: integer("xpLost").default(0).notNull(),
   attributeAffected: varchar("attributeAffected", { length: 50 }),
-  attributeLost: int("attributeLost").default(0).notNull(),
+  attributeLost: integer("attributeLost").default(0).notNull(),
   appliedAt: timestamp("appliedAt").defaultNow().notNull(),
 });
 
@@ -313,14 +313,14 @@ export type InsertPenalty = typeof penalties.$inferInsert;
 /**
  * Achievements/Badges system
  */
-export const achievements = mysqlTable("achievements", {
-  id: int("id").autoincrement().primaryKey(),
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   icon: varchar("icon", { length: 255 }).notNull(),
-  rarity: mysqlEnum("rarity", ["common", "uncommon", "rare", "epic", "legendary"]).default("common").notNull(),
+  rarity: pgEnum("rarity", ["common", "uncommon", "rare", "epic", "legendary"]).default("common").notNull(),
   trigger: varchar("trigger", { length: 100 }).notNull(),
-  triggerValue: int("triggerValue").default(1).notNull(),
+  triggerValue: integer("triggerValue").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -330,10 +330,10 @@ export type InsertAchievement = typeof achievements.$inferInsert;
 /**
  * User achievements (unlocked badges)
  */
-export const userAchievements = mysqlTable("userAchievements", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id),
-  achievementId: int("achievementId").notNull().references(() => achievements.id),
+export const userAchievements = pgTable("userAchievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id),
+  achievementId: integer("achievementId").notNull().references(() => achievements.id),
   unlockedAt: timestamp("unlockedAt").defaultNow().notNull(),
 });
 

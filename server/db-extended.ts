@@ -1,5 +1,4 @@
 import { eq, and } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
 import { customQuests, weeklyRewards, users } from "../drizzle/schema";
 import { getDb } from "./db";
 
