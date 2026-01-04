@@ -94,7 +94,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const quest = await db.getTodayQuests(ctx.user.id);
-        const targetQuest = quest.find(q => q.id === input.questId);
+        const targetQuest = quest.find( (q: any) => q.id === input.questId);
         
         if (!targetQuest) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Quest not found" });
