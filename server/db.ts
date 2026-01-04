@@ -1,5 +1,5 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
 import { InsertUser, users, userDailyQuests, userProgress, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -10,7 +10,7 @@ export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       const sql = neon(process.env.DATABASE_URL);
-      _db = drizzle({ client: sql });
+      _db = drizzle(sql);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
